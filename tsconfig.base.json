@@ -1,0 +1,32 @@
+{
+  "compilerOptions": {
+    "rootDir": ".",
+    "sourceMap": true,
+    "declaration": false,
+    "moduleResolution": "node",
+    "strictPropertyInitialization": false,
+    "noPropertyAccessFromIndexSignature": false,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "forceConsistentCasingInFileNames": true,
+    "target": "es2017",
+    "module": "esnext",
+    "lib": ["es2021", "dom"],
+    "skipLibCheck": true,
+    "skipDefaultLibCheck": true,
+    "baseUrl": ".",
+    "incremental": true,
+    "strictNullChecks": false,
+    "noImplicitAny": true,
+    "strictBindCallApply": false,
+    "noFallthroughCasesInSwitch": true,
+    "strict": true,
+    "paths": {
+      "@reliability/web/*": ["apps/web/src/*"],
+      "@reliability/worker/*": ["apps/worker/src/*"],
+      "@reliability/db/*": ["libs/db/src/*"],
+      "@reliability/core/*": ["libs/core/src/*"]
+    }
+  },
+  "exclude": ["node_modules", "tmp"]
+}
