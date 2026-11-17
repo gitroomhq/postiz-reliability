@@ -42,8 +42,12 @@ const clean = (text?: string | null) =>
     ? text.replace(/\u001b\[[0-9;]*m/g, '').slice(0, MAX_EXCERPT)
     : null;
 
+// Playwright's grep text puts a describe's tags right after its title
 export const grepFor = (title: string) =>
-  title.split(' › ').join(' ').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  title
+    .split(' › ')
+    .map((part) => part.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+    .join(' (?:@\\S+ )*');
 
 const statuses: Record<JsonResult['status'], ScenarioRunStatus> = {
   passed: 'PASSED',
@@ -89,7 +93,11 @@ export const classify = (
 
 const toResult = (test: JsonTest): ReportedScenario['result'] => {
   const result = test.results?.[test.results.length - 1];
-  const annotations = [...(test.annotations || []), ...(result?.annotations || [])];
+  // Runtime annotations appear on both the test and its result
+  const annotations = [...(test.annotations || []), ...(result?.annotations || [])].filter(
+    (a, i, all) =>
+      all.findIndex((b) => b.type === a.type && b.description === a.description) === i
+  );
   const status: ScenarioRunStatus = result ? statuses[result.status] : 'SKIPPED';
   const error =
     clean(result?.errors?.map((e) => e.message).filter(Boolean).join('\n\n')) ||

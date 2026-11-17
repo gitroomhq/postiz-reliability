@@ -38,7 +38,7 @@ export const blueskyPlatform: Platform = {
   async remove(credentials, releaseURL) {
     const rkey = releaseURL.split('/post/')[1]?.split(/[/?#]/)[0];
     if (!rkey) {
-      return false;
+      return { ok: false, error: 'no record key in the URL' };
     }
     try {
       const session = await createSession(credentials);
@@ -57,9 +57,11 @@ export const blueskyPlatform: Platform = {
           }),
         }
       );
-      return response.ok;
+      return response.ok
+        ? { ok: true }
+        : { ok: false, error: `deleteRecord failed: ${response.status}` };
     } catch (err) {
-      return false;
+      return { ok: false, error: (err as Error).message };
     }
   },
 };

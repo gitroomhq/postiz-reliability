@@ -9,5 +9,5 @@ export interface Platform {
   remove(
     credentials: Record<string, string>,
     releaseURL: string
-  ): Promise<boolean>;
+  ): Promise<PlatformCheck>;
 }

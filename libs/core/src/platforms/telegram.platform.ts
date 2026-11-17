@@ -39,17 +39,18 @@ export const telegramPlatform: Platform = {
   async remove(credentials, releaseURL) {
     const messageId = Number(releaseURL.split(/[?#]/)[0].split('/').pop());
     if (!messageId || !credentials.chatId) {
-      return false;
+      return { ok: false, error: 'no message id in the URL or no chat id saved' };
     }
     try {
-      return (
-        await call(credentials, 'deleteMessage', {
-          chat_id: credentials.chatId,
-          message_id: messageId,
-        })
-      ).ok;
+      const result = await call(credentials, 'deleteMessage', {
+        chat_id: credentials.chatId,
+        message_id: messageId,
+      });
+      return result.ok
+        ? { ok: true }
+        : { ok: false, error: `deleteMessage failed: ${result.status} ${result.description || ''}`.trim() };
     } catch (err) {
-      return false;
+      return { ok: false, error: (err as Error).message };
     }
   },
 };

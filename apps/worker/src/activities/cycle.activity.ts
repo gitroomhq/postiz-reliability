@@ -6,13 +6,14 @@ import { NO_TARGET } from '@reliability/core/scenario.constants';
 import { getPlatform } from '@reliability/core/platforms/platform.list';
 import {
   compareCommits,
+  gammaWrites,
   getBranchHead,
   moveGamma as moveGammaRef,
 } from '@reliability/core/integrations/github';
 import {
   deployPollInterval,
-  getDeployStates,
-} from '@reliability/core/integrations/railway';
+  getDeployStatus,
+} from '@reliability/core/integrations/deploy';
 import { listIntegrations } from '@reliability/core/integrations/postiz';
 import type { ScenarioOutcome } from '@reliability/worker/activities/scenario.activity';
 import {
@@ -105,27 +106,28 @@ export async function moveGamma(input: { runId: string; batchId: string; headSha
 }
 
 export async function awaitDeploy(input: { runId: string; headSha: string }) {
+  const { environment } = await prisma.run.findUniqueOrThrow({
+    where: { id: input.runId },
+    select: { environment: { select: { deployRepo: true, deployWorkflow: true } } },
+  });
+  // Without a real gamma move there is no deploy run to wait for
+  const workflow =
+    gammaWrites() && environment?.deployRepo && environment.deployWorkflow
+      ? { repo: environment.deployRepo, file: environment.deployWorkflow }
+      : null;
   return withHeartbeat(async () => {
     const started = Date.now();
     for (let poll = 0; Date.now() - started < DEPLOY_TIMEOUT; poll++) {
-      const states = await getDeployStates(input.headSha, poll);
+      const status = await getDeployStatus(workflow, input.headSha, poll).catch(
+        (err: Error) => ({ state: 'PENDING' as const, detail: err.message })
+      );
       setHeartbeatDetails(
-        `deploy ${input.headSha.slice(0, 7)}: ${Object.entries(states)
-          .map(([s, v]) => `${s}=${v.state}`)
-          .join(' ')}`
+        `deploy ${input.headSha.slice(0, 7)}: ${status.state}${status.detail ? ` (${status.detail})` : ''}`
       );
-      const broken = Object.entries(states).filter(([, v]) =>
-        ['FAILED', 'CRASHED'].includes(v.state)
-      );
-      if (broken.length) {
-        return {
-          ok: false,
-          error: broken
-            .map(([service, v]) => `${service} ${v.state}${v.log ? `:\n${v.log}` : ''}`)
-            .join('\n\n'),
-        };
+      if (status.state === 'FAILED') {
+        return { ok: false, error: status.detail || 'Deploy failed' };
       }
-      if (Object.values(states).every((v) => ['SUCCESS', 'SKIPPED'].includes(v.state))) {
+      if (status.state === 'SUCCESS') {
         await setPhase(input.runId, 'PRECONDITIONS');
         return { ok: true, error: null };
       }

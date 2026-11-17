@@ -25,6 +25,7 @@
     "postinstall": "pnpm run prisma-generate"
   },
   "dependencies": {
+    "@aws-sdk/client-sesv2": "^3.1003.0",
     "@modelcontextprotocol/sdk": "1.27.1",
     "@playwright/test": "1.63.0",
     "@prisma/client": "6.5.0",

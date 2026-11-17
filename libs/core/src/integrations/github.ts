@@ -8,15 +8,21 @@ const headers = () => ({
     : {}),
 });
 
-const get = async <T>(path: string): Promise<T> => {
-  const response = await fetch(`https://api.github.com/repos/${REPO}${path}`, {
-    headers: headers(),
+export const githubRequest = async <T>(path: string, init?: RequestInit): Promise<T> => {
+  const response = await fetch(`https://api.github.com${path}`, {
+    ...init,
+    headers: { ...headers(), ...(init?.body ? { 'Content-Type': 'application/json' } : {}) },
   });
   if (!response.ok) {
-    throw new Error(`GitHub GET ${path} failed: ${response.status}`);
+    throw new Error(`GitHub ${init?.method || 'GET'} ${path} failed: ${response.status}`);
   }
   return response.json() as Promise<T>;
 };
+
+const get = <T>(path: string) => githubRequest<T>(`/repos/${REPO}${path}`);
+
+export const gammaWrites = () =>
+  process.env.GAMMA_WRITES === 'true' && !!process.env.GITHUB_TOKEN;
 
 type GitHubCommit = {
   sha: string;
@@ -61,6 +67,14 @@ export const compareCommits = async (base: string, head: string) => {
 };
 
 export const moveGamma = async (sha: string) => {
-  console.log(`[github:dry-run] would set refs/heads/gamma to ${sha}`);
-  return { dryRun: true };
+  if (!gammaWrites()) {
+    console.log(`[github:dry-run] would set refs/heads/gamma to ${sha}`);
+    return { dryRun: true };
+  }
+  // force: a gamma that diverged from main can't be fast-forwarded
+  await githubRequest(`/repos/${REPO}/git/refs/heads/gamma`, {
+    method: 'PATCH',
+    body: JSON.stringify({ sha, force: true }),
+  });
+  return { dryRun: false };
 };

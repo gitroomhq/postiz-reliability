@@ -178,6 +178,9 @@ export async function runScenarios(input: {
         POSTIZ_SMOKE_API_KEY: AuthService.fixedDecryption(testUser.apiKey),
         POSTIZ_SMOKE_MCP_URL: environment.mcpUrl || '',
         POSTIZ_SMOKE_CHANNELS: JSON.stringify(channels),
+        RELIABILITY_FORCE_FAIL: JSON.stringify(
+          scenarios.filter((s) => s.forceFail).map((s) => s.title)
+        ),
         RELIABILITY_RUN_ID: `${run.id.slice(0, 8)}-${input.attempt}`,
         PLAYWRIGHT_JSON_OUTPUT_FILE: reportFile,
       },

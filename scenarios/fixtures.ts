@@ -13,7 +13,7 @@ export type GateChannel = {
   credentials?: Record<string, string>;
 };
 
-const parseChannels = (value: string | undefined): GateChannel[] => {
+const parseList = <T>(value: string | undefined): T[] => {
   try {
     return JSON.parse(value || '[]');
   } catch {
@@ -30,7 +30,8 @@ export const gate = {
     /\/+$/,
     ''
   ),
-  channels: parseChannels(process.env.POSTIZ_SMOKE_CHANNELS),
+  channels: parseList<GateChannel>(process.env.POSTIZ_SMOKE_CHANNELS),
+  forceFail: parseList<string>(process.env.RELIABILITY_FORCE_FAIL),
 };
 
 export const RUN_ID =
@@ -237,10 +238,11 @@ export const cleanup = async (
 ) => {
   const platform = getPlatform(channel.provider);
   if (releaseURL && platform && channel.credentials) {
-    if (!(await platform.remove(channel.credentials, releaseURL))) {
+    const removed = await platform.remove(channel.credentials, releaseURL);
+    if (!removed.ok) {
       testInfo.annotations.push({
         type: 'cleanup-failed',
-        description: `${releaseURL} is still on ${channel.provider}`,
+        description: `${releaseURL} is still on ${channel.provider}${removed.error ? ` (${removed.error})` : ''}`,
       });
     }
   }
@@ -252,10 +254,21 @@ export const cleanup = async (
   }
 };
 
-export const test = base.extend<{ postiz: PostizClient }>({
+export const test = base.extend<{ postiz: PostizClient; forceFail: void }>({
   postiz: async ({ request }, use) => {
     await use(new PostizClient(request));
   },
+  // Fault injection: Scenario.forceFail fails the spec before it publishes anything
+  forceFail: [
+    async ({}, use, testInfo) => {
+      expect(
+        gate.forceFail.includes(testInfo.titlePath.slice(1).join(' › ')),
+        'forced failure (Scenario.forceFail)'
+      ).toBe(false);
+      await use();
+    },
+    { auto: true },
+  ],
 });
 
 export { expect };
