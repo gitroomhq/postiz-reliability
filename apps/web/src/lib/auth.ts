@@ -4,7 +4,7 @@ import { Member } from '@prisma/client';
 import { prisma } from '@reliability/db/prisma';
 import { AuthService } from '@reliability/core/auth.service';
 
-export const AUTH_COOKIE = 'auth';
+export const AUTH_COOKIE = 'reliability_auth';
 
 export type Session = { member: Member; scopes: string[]; actor: string };
 
