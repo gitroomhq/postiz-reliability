@@ -45,7 +45,7 @@ test.describe('scheduled post', { tag: '@publish' }, () => {
       );
       releaseURL = post.releaseURL;
 
-      // Only catches a post published at least one poll interval early
+      // Early publication by less than one poll interval can go undetected
       await test.step('it was not seen published before its date', async () => {
         expect(settledAt).toBeGreaterThanOrEqual(publishDate.getTime());
       });
