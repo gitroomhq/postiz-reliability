@@ -85,7 +85,7 @@ export async function cycleWorkflow(request: CycleRequest): Promise<CycleResult>
 
     if (verdict.verdict === 'RED') {
       await analyzeRun({ runId }).catch(() => undefined);
-      await notifyRed({ runId });
+      await notifyRed({ runId }).catch(() => undefined);
     }
 
     return { runId, verdict: verdict.verdict, halt: verdict.halt };
