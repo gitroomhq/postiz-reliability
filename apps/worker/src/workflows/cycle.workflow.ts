@@ -84,7 +84,7 @@ export async function cycleWorkflow(request: CycleRequest): Promise<CycleResult>
     });
 
     if (verdict.verdict === 'RED') {
-      await analyzeRun({ runId });
+      await analyzeRun({ runId }).catch(() => undefined);
       await notifyRed({ runId });
     }
 

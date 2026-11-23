@@ -5,6 +5,8 @@ import { prisma } from '@reliability/db/prisma';
 import { AuthService } from '@reliability/core/auth.service';
 
 export const AUTH_COOKIE = 'reliability_auth';
+export const OAUTH_STATE_COOKIE = 'reliability_oauth_state';
+const SESSION_SECONDS = 60 * 60 * 24 * 30;
 
 export type Session = { member: Member; scopes: string[]; actor: string };
 
@@ -88,12 +90,12 @@ export const loginResponse = async (email: string) => {
     );
   }
   const response = NextResponse.redirect(new URL('/', process.env.APP_URL), 303);
-  response.cookies.set(AUTH_COOKIE, AuthService.signJWT({ id: member.id }), {
+  response.cookies.set(AUTH_COOKIE, AuthService.signJWT({ id: member.id }, SESSION_SECONDS), {
     httpOnly: true,
     secure: (process.env.APP_URL || '').startsWith('https://'),
     sameSite: 'lax',
     path: '/',
-    expires: new Date(Date.now() + 1000 * 60 * 60 * 24 * 30),
+    expires: new Date(Date.now() + SESSION_SECONDS * 1000),
   });
   return response;
 };

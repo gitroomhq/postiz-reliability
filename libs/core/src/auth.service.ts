@@ -17,8 +17,8 @@ function deriveKeyIv(secret: string) {
 }
 
 export class AuthService {
-  static signJWT(value: object) {
-    return sign(value, process.env.JWT_SECRET!);
+  static signJWT(value: object, expiresIn?: number) {
+    return sign(value, process.env.JWT_SECRET!, expiresIn ? { expiresIn } : {});
   }
   static verifyJWT(token: string) {
     return verify(token, process.env.JWT_SECRET!);

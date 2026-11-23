@@ -1,5 +1,5 @@
 import { NativeConnection, Worker } from '@temporalio/worker';
-import { Client, Connection } from '@temporalio/client';
+import { Client, Connection, WorkflowExecutionAlreadyStartedError } from '@temporalio/client';
 import * as activities from '@reliability/worker/activities';
 import { syncScenarios } from '@reliability/worker/activities/scenario.activity';
 import {
@@ -38,7 +38,11 @@ async function bootstrap() {
       taskQueue: TASK_QUEUE,
       args: [{}],
     });
-  } catch (err) {}
+  } catch (err) {
+    if (!(err instanceof WorkflowExecutionAlreadyStartedError)) {
+      throw err;
+    }
+  }
 
   console.log(`Worker listening on task queue ${TASK_QUEUE}`);
   await worker.run();

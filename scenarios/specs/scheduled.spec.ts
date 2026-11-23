@@ -45,6 +45,10 @@ test.describe('scheduled post', { tag: '@publish' }, () => {
       );
       releaseURL = post.releaseURL;
 
+      await test.step('it was not published before its date', async () => {
+        expect(settledAt).toBeGreaterThanOrEqual(publishDate.getTime());
+      });
+
       await test.step('it is PUBLISHED with a release URL', () => expectPublished(post));
 
       await test.step('the release URL is reachable', () =>

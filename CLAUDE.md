@@ -10,3 +10,4 @@
 - Integrations stay dry-run unless live credentials are set. Nothing writes to postiz-app, postiz-aws, GitHub, AWS, gamma or prod outside the milestone that allows it.
 - Minimal comments.
 - Don't edit `reliability-*.md` or `requirements.md` unless asked.
+- CodeRabbit doesn't review this repo automatically: after opening a PR, trigger it with a PR comment `@coderabbitai review`.

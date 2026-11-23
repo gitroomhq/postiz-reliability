@@ -3,6 +3,7 @@ import {
   googleLoginEnabled,
   isAllowedEmail,
   loginResponse,
+  OAUTH_STATE_COOKIE,
 } from '@reliability/web/lib/auth';
 import { getGoogleUser } from '@reliability/web/lib/google';
 
@@ -14,7 +15,9 @@ const fail = (error: string) =>
 
 export const GET = async (request: NextRequest) => {
   const code = request.nextUrl.searchParams.get('code');
-  if (!googleLoginEnabled() || !code) {
+  const state = request.nextUrl.searchParams.get('state');
+  const expected = request.cookies.get(OAUTH_STATE_COOKIE)?.value;
+  if (!googleLoginEnabled() || !code || !state || state !== expected) {
     return fail('google');
   }
   try {

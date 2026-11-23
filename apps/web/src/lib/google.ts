@@ -9,11 +9,11 @@ const makeClient = () =>
     redirectUri: redirectUri(),
   });
 
-export const generateLink = () =>
+export const generateLink = (state: string) =>
   makeClient().generateAuthUrl({
     access_type: 'online',
     prompt: 'select_account',
-    state: 'login',
+    state,
     hd: 'postiz.com',
     scope: [
       'https://www.googleapis.com/auth/userinfo.profile',

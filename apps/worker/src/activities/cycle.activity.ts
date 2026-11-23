@@ -110,11 +110,13 @@ export async function awaitDeploy(input: { runId: string; headSha: string }) {
     where: { id: input.runId },
     select: { environment: { select: { deployRepo: true, deployWorkflow: true } } },
   });
+  if (gammaWrites() && !(environment?.deployRepo && environment.deployWorkflow)) {
+    return { ok: false, error: 'Deploy workflow not configured for this environment' };
+  }
   // Without a real gamma move there is no deploy run to wait for
-  const workflow =
-    gammaWrites() && environment?.deployRepo && environment.deployWorkflow
-      ? { repo: environment.deployRepo, file: environment.deployWorkflow }
-      : null;
+  const workflow = gammaWrites()
+    ? { repo: environment!.deployRepo!, file: environment!.deployWorkflow! }
+    : null;
   return withHeartbeat(async () => {
     const started = Date.now();
     for (let poll = 0; Date.now() - started < DEPLOY_TIMEOUT; poll++) {
@@ -157,7 +159,7 @@ export async function checkPreconditions(input: { runId: string }) {
   ).catch((err: Error) => err);
 
   const failing: string[] = [];
-  for (const channel of testUser.channels) {
+  for (const channel of testUser.channels.filter((c) => c.health !== 'DISABLED')) {
     let error: string | null = null;
     if (integrations instanceof Error) {
       error = integrations.message;
@@ -216,7 +218,7 @@ export async function recordVerdict(input: {
     classification = red.some((o) => o.classification === 'CODE') ? 'CODE' : 'UNCLASSIFIED';
   } else if (
     input.skipped ||
-    gating.some((o) => FAILED.includes(o.status)) ||
+    gating.some((o) => FAILED.includes(o.status) || o.status === 'INTERRUPTED') ||
     !gating.some((o) => o.status === 'PASSED')
   ) {
     verdict = 'INFRA';

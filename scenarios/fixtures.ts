@@ -165,11 +165,11 @@ export class PostizClient {
             settled = post;
             settledAt = Date.now();
           }
-          return post?.state;
+          return !!post && post.state !== 'QUEUE';
         },
         { timeout, intervals: [interval], message: `waiting for post ${id} to leave QUEUE` }
       )
-      .not.toBe('QUEUE');
+      .toBe(true);
     return { post: settled!, settledAt };
   }
 
