@@ -1,0 +1,10 @@
+{
+  "name": "reliability-worker",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "dotenv -e ../../.env -- nest start --watch --entryFile=./apps/worker/src/main",
+    "build": "cross-env NODE_ENV=production nest build",
+    "start": "dotenv -e ../../.env -- node ./dist/apps/worker/src/main.js"
+  }
+}

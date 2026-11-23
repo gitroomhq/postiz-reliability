@@ -1,0 +1,11 @@
+{
+  "name": "reliability-web",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "dotenv -e ../../.env -- next dev -p 4300",
+    "build": "next build",
+    "start": "dotenv -e ../../.env -- next start -p 4300"
+  }
+}

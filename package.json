@@ -1,0 +1,61 @@
+{
+  "name": "postiz-reliability",
+  "version": "1.0.0",
+  "private": true,
+  "license": "AGPL-3.0",
+  "engines": {
+    "node": ">=22.12.0 <23.0.0"
+  },
+  "packageManager": "pnpm@10.6.1",
+  "scripts": {
+    "dev": "pnpm run --filter ./apps/web --filter ./apps/worker --parallel dev",
+    "build": "pnpm -r --workspace-concurrency=1 --filter ./apps/web --filter ./apps/worker run build",
+    "build:web": "pnpm --filter ./apps/web run build",
+    "build:worker": "rm -rf apps/worker/dist && pnpm --filter ./apps/worker run build",
+    "dev:web": "pnpm --filter ./apps/web run dev",
+    "dev:worker": "rm -rf apps/worker/dist && pnpm --filter ./apps/worker run dev",
+    "start:prod:web": "pnpm --filter ./apps/web run start",
+    "start:prod:worker": "pnpm --filter ./apps/worker run start",
+    "dev:docker": "docker compose -f ./docker-compose.dev.yaml up -d",
+    "scenarios:list": "playwright test --config ./scenarios/playwright.config.ts --list",
+    "prisma-generate": "pnpm dlx prisma@6.5.0 generate --schema ./libs/db/src/prisma/schema.prisma",
+    "prisma-db-push": "pnpm dlx prisma@6.5.0 db push --schema ./libs/db/src/prisma/schema.prisma",
+    "seed:admin": "dotenv -e .env -- node ./libs/db/src/seed.admin.mjs",
+    "seed:target": "dotenv -e .env -- node ./libs/db/src/seed.target.mjs",
+    "postinstall": "pnpm run prisma-generate"
+  },
+  "dependencies": {
+    "@aws-sdk/client-sesv2": "^3.1003.0",
+    "@modelcontextprotocol/sdk": "1.27.1",
+    "@playwright/test": "1.63.0",
+    "@prisma/client": "6.5.0",
+    "@temporalio/activity": "1.15.0",
+    "@temporalio/client": "1.15.0",
+    "@temporalio/common": "1.15.0",
+    "@temporalio/worker": "1.15.0",
+    "@temporalio/workflow": "1.15.0",
+    "@types/jsonwebtoken": "^9.0.5",
+    "chart.js": "^4.4.1",
+    "clsx": "^2.1.0",
+    "dayjs": "^1.11.10",
+    "dotenv-cli": "^8.0.0",
+    "evp_bytestokey": "^1.0.3",
+    "googleapis": "^137.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "next": "16.3.1",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "swr": "^2.2.5",
+    "tailwindcss": "3.4.17"
+  },
+  "devDependencies": {
+    "@nestjs/cli": "^11.0.21",
+    "@types/node": "18.16.9",
+    "@types/react": "19.1.8",
+    "@types/react-dom": "19.1.6",
+    "cross-env": "^10.0.0",
+    "postcss": "8.5.26",
+    "prisma": "6.5.0",
+    "typescript": "5.5.4"
+  }
+}

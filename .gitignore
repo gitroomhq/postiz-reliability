@@ -1,0 +1,24 @@
+# dependencies
+node_modules
+
+# compiled output
+dist
+.next
+*.tsbuildinfo
+next-env.d.ts
+
+# secrets
+.env
+*.pem
+
+# Playwright
+test-results
+playwright-report
+
+# IDEs and editors
+/.idea
+.vscode/
+
+# System Files
+.DS_Store
+Thumbs.db

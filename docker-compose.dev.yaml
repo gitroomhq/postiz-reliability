@@ -1,0 +1,54 @@
+name: postiz-reliability
+
+services:
+  postgres-app:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_PASSWORD: reliability-local-pwd
+      POSTGRES_USER: reliability-local
+      POSTGRES_DB: reliability-db-local
+    volumes:
+      - postgres-app-volume:/var/lib/postgresql/data
+    ports:
+      - 5442:5432
+
+  postgres-temporal:
+    image: postgres:16
+    environment:
+      POSTGRES_PASSWORD: temporal
+      POSTGRES_USER: temporal
+    volumes:
+      - postgres-temporal-volume:/var/lib/postgresql/data
+    ports:
+      - 5443:5432
+
+  temporal:
+    image: temporalio/auto-setup:1.28.1
+    depends_on:
+      - postgres-temporal
+    environment:
+      - DB=postgres12
+      - DB_PORT=5432
+      - POSTGRES_USER=temporal
+      - POSTGRES_PWD=temporal
+      - POSTGRES_SEEDS=postgres-temporal
+      - DYNAMIC_CONFIG_FILE_PATH=config/dynamicconfig/development-sql.yaml
+      - ENABLE_ES=false
+    volumes:
+      - ./dynamicconfig:/etc/temporal/config/dynamicconfig
+    ports:
+      - 7243:7233
+
+  temporal-ui:
+    image: temporalio/ui:2.34.0
+    depends_on:
+      - temporal
+    environment:
+      - TEMPORAL_ADDRESS=temporal:7233
+      - TEMPORAL_CORS_ORIGINS=http://localhost:4300
+    ports:
+      - 8088:8080
+
+volumes:
+  postgres-app-volume:
+  postgres-temporal-volume:

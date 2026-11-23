@@ -1,0 +1,494 @@
+generator client {
+  provider = "prisma-client-js"
+  runtime  = "nodejs"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  VIEWER
+  ADMIN
+}
+
+enum ChannelHealth {
+  UNKNOWN
+  OK
+  FAILING
+  DISABLED
+}
+
+enum BatchStatus {
+  PENDING
+  TESTING
+  GREEN
+  RED
+  INCONCLUSIVE
+  NO_CHANGES
+  CANCELLED
+}
+
+enum RunTrigger {
+  SCHEDULE
+  MANUAL
+  BATCH
+  POST_PROMOTION
+  CANARY
+  PARTIAL
+}
+
+enum RunPolicy {
+  GATE
+  ALERT
+  REPORT
+}
+
+enum RunStatus {
+  QUEUED
+  RUNNING
+  COMPLETED
+  SKIPPED
+  CANCELLED
+  ERROR
+}
+
+enum RunPhase {
+  RESOLVE_BATCH
+  MOVE_GAMMA
+  AWAIT_DEPLOY
+  PRECONDITIONS
+  SCENARIOS
+  VERDICT
+  NOTIFY
+  DONE
+}
+
+enum Verdict {
+  GREEN
+  RED
+  INFRA
+  NO_CHANGES
+}
+
+enum ScenarioRunStatus {
+  PASSED
+  FAILED
+  SKIPPED
+  TIMED_OUT
+  INTERRUPTED
+}
+
+enum Classification {
+  CODE
+  EXTERNAL
+  INFRA
+  UNCLASSIFIED
+}
+
+enum StepStatus {
+  PASSED
+  FAILED
+  SKIPPED
+}
+
+enum SystemStatus {
+  IDLE
+  RUNNING
+  PAUSED
+  HALTED
+}
+
+enum NotificationStatus {
+  SENT
+  LOGGED
+  FAILED
+}
+
+enum BisectStatus {
+  PENDING
+  RUNNING
+  FOUND
+  INCONCLUSIVE
+}
+
+enum DetectorType {
+  THRESHOLD
+  BASELINE_RATIO
+  SLOPE
+  ABSENCE
+}
+
+enum IncidentState {
+  OPEN
+  ACKNOWLEDGED
+  RESOLVED
+}
+
+enum ComponentStatus {
+  OPERATIONAL
+  DEGRADED
+  OUTAGE
+  UNKNOWN
+}
+
+enum ActionStatus {
+  RECOMMENDED
+  EXECUTED
+  DISMISSED
+}
+
+model Member {
+  id        String     @id @default(uuid())
+  email     String     @unique
+  role      Role       @default(VIEWER)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  deletedAt DateTime?
+  apiTokens ApiToken[]
+  auditLogs AuditLog[]
+}
+
+model ApiToken {
+  id         String    @id @default(uuid())
+  name       String
+  hash       String    @unique
+  scopes     String[]
+  memberId   String
+  member     Member    @relation(fields: [memberId], references: [id])
+  createdAt  DateTime  @default(now())
+  lastUsedAt DateTime?
+  revokedAt  DateTime?
+
+  @@index([memberId])
+}
+
+model Environment {
+  id                   String     @id @default(uuid())
+  name                 String     @unique
+  apiUrl               String
+  mcpUrl               String?
+  frontendUrl          String?
+  deployRepo           String?
+  deployWorkflow       String?
+  createdAt            DateTime   @default(now())
+  updatedAt            DateTime   @updatedAt
+  deletedAt            DateTime?
+  testUsers            TestUser[]
+  runs                 Run[]
+}
+
+model TestUser {
+  id            String        @id @default(uuid())
+  environmentId String
+  environment   Environment   @relation(fields: [environmentId], references: [id])
+  name          String
+  apiKey        String
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  deletedAt     DateTime?
+  channels      TestChannel[]
+
+  @@index([environmentId])
+}
+
+model TestChannel {
+  id              String        @id @default(uuid())
+  testUserId      String
+  testUser        TestUser      @relation(fields: [testUserId], references: [id])
+  provider        String
+  integrationId   String
+  credentials     String?
+  health          ChannelHealth @default(UNKNOWN)
+  healthError     String?
+  healthCheckedAt DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  deletedAt       DateTime?
+
+  @@index([testUserId])
+}
+
+model Scenario {
+  id           String        @id @default(uuid())
+  key          String        @unique
+  file         String
+  title        String
+  tags         String[]
+  timeoutMs    Int?
+  quarantined  Boolean       @default(false)
+  forceFail    Boolean       @default(false)
+  active       Boolean       @default(true)
+  lastSyncedAt DateTime      @default(now())
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  runs         ScenarioRun[]
+}
+
+model Batch {
+  id         String      @id @default(uuid())
+  baseSha    String?
+  headSha    String
+  gammaSha   String?
+  commits    Json
+  status     BatchStatus @default(PENDING)
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+  runs       Run[]
+  bisects    Bisect[]
+  promotions Promotion[]
+
+  @@index([status])
+  @@index([createdAt])
+}
+
+model Run {
+  id             String          @id @default(uuid())
+  batchId        String?
+  batch          Batch?          @relation(fields: [batchId], references: [id])
+  environmentId  String?
+  environment    Environment?    @relation(fields: [environmentId], references: [id])
+  trigger        RunTrigger
+  policy         RunPolicy       @default(GATE)
+  status         RunStatus       @default(QUEUED)
+  phase          RunPhase?
+  verdict        Verdict?
+  classification Classification?
+  workflowId     String?
+  summary        String?
+  error          String?
+  aiAnalysis     String?
+  startedAt      DateTime?
+  finishedAt     DateTime?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  scenarioRuns   ScenarioRun[]
+  notifications  Notification[]
+  dataPoints     DataPoint[]
+
+  @@index([batchId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model ScenarioRun {
+  id             String              @id @default(uuid())
+  runId          String
+  run            Run                 @relation(fields: [runId], references: [id])
+  scenarioId     String
+  scenario       Scenario            @relation(fields: [scenarioId], references: [id])
+  attempt        Int                 @default(1)
+  status         ScenarioRunStatus
+  classification Classification?
+  error          String?
+  durationMs     Int?
+  startedAt      DateTime?
+  createdAt      DateTime            @default(now())
+  steps          StepResult[]
+  artifacts      Artifact[]
+
+  @@index([runId])
+  @@index([scenarioId])
+}
+
+model StepResult {
+  id            String      @id @default(uuid())
+  scenarioRunId String
+  scenarioRun   ScenarioRun @relation(fields: [scenarioRunId], references: [id])
+  index         Int
+  title         String
+  status        StepStatus
+  excerpt       String?
+  durationMs    Int?
+  createdAt     DateTime    @default(now())
+
+  @@index([scenarioRunId])
+}
+
+model SystemState {
+  id           String       @id @default("singleton")
+  status       SystemStatus @default(IDLE)
+  reason       String?
+  lastGreenSha String?
+  currentRunId String?
+  nextRunAt    DateTime?
+  updatedAt    DateTime     @updatedAt
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  memberId  String?
+  member    Member?  @relation(fields: [memberId], references: [id])
+  actor     String
+  action    String
+  reason    String?
+  data      Json?
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}
+
+model Notification {
+  id         String             @id @default(uuid())
+  runId      String?
+  run        Run?               @relation(fields: [runId], references: [id])
+  incidentId String?
+  incident   Incident?          @relation(fields: [incidentId], references: [id])
+  channel    String
+  recipients String[]
+  subject    String
+  body       String?
+  status     NotificationStatus
+  error      String?
+  createdAt  DateTime           @default(now())
+
+  @@index([runId])
+}
+
+model DataPoint {
+  id         String   @id @default(uuid())
+  metric     String
+  dimensions Json?
+  ts         DateTime
+  value      Float
+  release    String?
+  runId      String?
+  run        Run?     @relation(fields: [runId], references: [id])
+  createdAt  DateTime @default(now())
+
+  @@index([metric, ts])
+  @@index([runId])
+}
+
+model Artifact {
+  id            String      @id @default(uuid())
+  scenarioRunId String
+  scenarioRun   ScenarioRun @relation(fields: [scenarioRunId], references: [id])
+  name          String
+  contentType   String
+  path          String
+  size          Int?
+  createdAt     DateTime    @default(now())
+
+  @@index([scenarioRunId])
+}
+
+model Bisect {
+  id           String       @id @default(uuid())
+  batchId      String
+  batch        Batch        @relation(fields: [batchId], references: [id])
+  scenarioKeys String[]
+  candidates   Json
+  culpritSha   String?
+  status       BisectStatus @default(PENDING)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  @@index([batchId])
+}
+
+model Promotion {
+  id           String   @id @default(uuid())
+  batchId      String
+  batch        Batch    @relation(fields: [batchId], references: [id])
+  beforeSha    String
+  afterSha     String?
+  prNumber     Int?
+  deployIds    Json?
+  rollbackSafe Boolean?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([batchId])
+}
+
+model Collector {
+  id              String   @id @default(uuid())
+  name            String   @unique
+  source          String
+  intervalSeconds Int
+  query           Json?
+  enabled         Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model Metric {
+  id          String     @id @default(uuid())
+  name        String     @unique
+  unit        String?
+  description String?
+  createdAt   DateTime   @default(now())
+  detectors   Detector[]
+}
+
+model Detector {
+  id          String       @id @default(uuid())
+  metricId    String
+  metric      Metric       @relation(fields: [metricId], references: [id])
+  componentId String?
+  component   Component?   @relation(fields: [componentId], references: [id])
+  type        DetectorType
+  params      Json
+  enabled     Boolean      @default(true)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@index([metricId])
+}
+
+model Component {
+  id                 String              @id @default(uuid())
+  name               String
+  parentId           String?
+  parent             Component?          @relation("ComponentTree", fields: [parentId], references: [id])
+  children           Component[]         @relation("ComponentTree")
+  status             ComponentStatus     @default(UNKNOWN)
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  detectors          Detector[]
+  incidents          Incident[]
+  maintenanceWindows MaintenanceWindow[]
+
+  @@index([parentId])
+}
+
+model Incident {
+  id            String         @id @default(uuid())
+  componentId   String?
+  component     Component?     @relation(fields: [componentId], references: [id])
+  title         String
+  state         IncidentState  @default(OPEN)
+  aiAnalysis    String?
+  data          Json?
+  openedAt      DateTime       @default(now())
+  resolvedAt    DateTime?
+  actions       Action[]
+  notifications Notification[]
+
+  @@index([state])
+}
+
+model Action {
+  id         String       @id @default(uuid())
+  incidentId String?
+  incident   Incident?    @relation(fields: [incidentId], references: [id])
+  type       String
+  status     ActionStatus @default(RECOMMENDED)
+  data       Json?
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+
+  @@index([incidentId])
+}
+
+model MaintenanceWindow {
+  id          String     @id @default(uuid())
+  componentId String?
+  component   Component? @relation(fields: [componentId], references: [id])
+  startsAt    DateTime
+  endsAt      DateTime
+  reason      String?
+  createdAt   DateTime   @default(now())
+}
